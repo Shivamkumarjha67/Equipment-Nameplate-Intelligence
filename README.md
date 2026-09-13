@@ -90,7 +90,7 @@ Technicians and maintenance engineers routinely face three structural bottleneck
 
    > For "ACCEPTED" scenario, directly creating the knowldege base for it in(Neo4j aura), by providing option of ingetion.
 
-   ![Extracted Technical Fields, along with Model classification, Laplician Blur score, Mean OCR Confidence Score, Classified as "ACCEPTED".](snapshots/image.png)
+   ![Extracted Technical Fields, along with Model classification, Laplician Blur score, Mean OCR Confidence Score, Classified as "ACCEPTED".](snapshots/image2.png)
 
    > IsolationForest (Physical Plausibility Gate): The parameter triplet $[V, I, P]$ is evaluated by isolation_forest.joblib. The model uses random tree isolation splits to check if the relationship aligns with the electrical power law.
 
