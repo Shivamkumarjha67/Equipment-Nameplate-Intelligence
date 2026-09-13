@@ -10,10 +10,6 @@ models/*.joblib
 
 # Synthetic & raw images (keep repo light; track annotations only if needed)
 data/synthetic/images/
-data/raw/
-*.png
-*.jpg
-*.jpeg
 
 # IDE & OS
 .vscode/
