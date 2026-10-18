@@ -1,0 +1,47 @@
+{
+  "fields": {
+    "manufacturer": {
+      "raw_acc": 100.0,
+      "pipeline_acc": 100.0,
+      "lift": 0.0
+    },
+    "voltage": {
+      "raw_acc": 100.0,
+      "pipeline_acc": 86.7,
+      "lift": -13.3
+    },
+    "current": {
+      "raw_acc": 93.3,
+      "pipeline_acc": 93.3,
+      "lift": 0.0
+    },
+    "power": {
+      "raw_acc": 93.3,
+      "pipeline_acc": 86.7,
+      "lift": -6.7
+    },
+    "frequency": {
+      "raw_acc": 93.3,
+      "pipeline_acc": 86.7,
+      "lift": -6.7
+    },
+    "serial_number": {
+      "raw_acc": 53.3,
+      "pipeline_acc": 53.3,
+      "lift": 0.0
+    }
+  },
+  "triage": {
+    "safety_recall": 100.0,
+    "precision": 100.0,
+    "false_acceptance_rate": 0.0
+  },
+  "latency_ms": {
+    "cv_p50": 74.9,
+    "cv_p95": 97.0,
+    "ocr_p50": 9611.6,
+    "ocr_p95": 13227.2,
+    "ml_p50": 16.3,
+    "ml_p95": 28.7
+  }
+}

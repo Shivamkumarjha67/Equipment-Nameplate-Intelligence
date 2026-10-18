@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  nameplate-intelligence:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nameplate_intelligence_app
+    ports:
+      - "8501:8501"
+    environment:
+      - NEO4J_URI=${NEO4J_URI:-neo4j+s://your-instance.databases.neo4j.io}
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-your-password}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - BLUR_THRESHOLD=100.0
+      - MIN_CONFIDENCE_THRESHOLD=0.75
+    volumes:
+      - ./data:/app/data:ro
+    restart: unless-stopped
+

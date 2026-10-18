@@ -12,7 +12,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from PIL import Image
-from src.config import MODELS_DIR
+from src.config import MODELS_DIR, SYNTHETIC_IMAGES
 from src.rag.query_engine import GraphQueryEngine
 from src.graph.connection import Neo4jConnector
 from src.graph.ingestor import EquipmentGraphIngestor
@@ -62,10 +62,21 @@ with tab1:
   col_upload, col_meta = st.columns([2, 1])
 
   with col_upload:
-    uploaded_file = st.file_uploader(
-        "Upload equipment nameplate photograph (.jpg, .png)",
-        type=["jpg", "jpeg", "png"],
+    preset_choice = st.selectbox(
+        "Choose an Industrial Demo Sample or Upload Custom:",
+        [
+            "Custom Upload",
+            "Demo 1: Clean Plate (High Quality -> ACCEPTED)",
+            "Demo 2: Perspective Tilt (4-Point Homography Rectification -> ACCEPTED)",
+            "Demo 3: Severe Glare & Blur (Quality Gate -> MANUAL REVIEW REQUIRED)",
+        ],
     )
+    uploaded_file = None
+    if preset_choice == "Custom Upload":
+      uploaded_file = st.file_uploader(
+          "Upload equipment nameplate photograph (.jpg, .png)",
+          type=["jpg", "jpeg", "png"],
+      )
 
   with col_meta:
     location_code = st.selectbox(
@@ -76,10 +87,22 @@ with tab1:
         "Maintenance Log Note (Optional)", "Routine scheduled visual audit"
     )
 
-  if uploaded_file is not None:
+  img_bgr = None
+  if preset_choice != "Custom Upload":
+    preset_map = {
+        "Demo 1: Clean Plate (High Quality -> ACCEPTED)": SYNTHETIC_IMAGES / "plate_00000.jpg",
+        "Demo 2: Perspective Tilt (4-Point Homography Rectification -> ACCEPTED)": SYNTHETIC_IMAGES / "plate_00001.jpg",
+        "Demo 3: Severe Glare & Blur (Quality Gate -> MANUAL REVIEW REQUIRED)": SYNTHETIC_IMAGES / "plate_00005.jpg",
+    }
+    sample_path = preset_map.get(preset_choice)
+    if sample_path and sample_path.exists():
+      img_bgr = cv2.imread(str(sample_path))
+  elif uploaded_file is not None:
     # Convert uploaded file to OpenCV BGR format
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
     img_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+  if img_bgr is not None:
 
     st.subheader("1. Computer Vision & Geometric Rectification")
     with st.spinner("Executing OpenCV Homography & CLAHE Enhancement..."):
@@ -121,13 +144,14 @@ with tab1:
     # 1. Show the extracted matrix directly under Step 2
     specs_display = []
     for field, data in preds.items():
+        val = data.get("value")
         specs_display.append({
             "Parameter": field.upper(),
-            "Extracted Value": data.get("value"),
+            "Extracted Value": str(val) if val is not None else "—",
             "Model Confidence": f"{data.get('confidence', 0.0) * 100:.1f}%",
-            "Status": "Extracted" if data.get("value") is not None else "Missing",
+            "Status": "Extracted" if val is not None else "Missing",
         })
-    st.dataframe(pd.DataFrame(specs_display), width='stretch')
+    st.dataframe(pd.DataFrame(specs_display), use_container_width=True)
 
     # 2. Add an expander showing raw OCR tokens detected in Step 2
     with st.expander("📝 View Raw OCR Detections & Token Bounding Boxes"):
@@ -135,7 +159,7 @@ with tab1:
             {"Detected Text": t["text"], "Confidence": f"{t['confidence']*100:.1f}%"}
             for t in tokens
         ]
-        st.dataframe(pd.DataFrame(raw_tokens_df), width='stretch')
+        st.dataframe(pd.DataFrame(raw_tokens_df), use_container_width=True)
 
     # ==========================================
     # STEP 3: ML QUALITY GATE & TRIAGE
@@ -175,16 +199,23 @@ with tab1:
     if triage_pred == 0:
       if st.button("🚀 Ingest Asset into Neo4j AuraDB"):
         with st.spinner("Executing Cypher MERGE transactions..."):
-          success = ingestor.ingest_nameplate(
-              preds, location_code=location_code, maintenance_note=maint_note
-          )
-          if success:
-            st.success(
-                f"Asset {preds.get('serial_number', {}).get('value')} linked to"
-                f" {location_code} in Neo4j AuraDB."
+          try:
+            success = ingestor.ingest_nameplate(
+                preds, location_code=location_code, maintenance_note=maint_note
             )
-          else:
-            st.error("Missing Serial Number or Manufacturer to ingest.")
+            if success:
+              st.success(
+                  f"Asset {preds.get('serial_number', {}).get('value')} linked to"
+                  f" {location_code} in Neo4j AuraDB."
+              )
+            else:
+              st.error("Missing Serial Number or Manufacturer to ingest.")
+          except Exception as db_err:
+            st.error(
+                f"⚠️ Could not connect to Neo4j AuraDB ({db_err}).\n\n"
+                "Tip: If you are using Neo4j Aura Free tier, the database may be paused after 3 days of inactivity. "
+                "Log into https://console.neo4j.io to resume it or check your connection string."
+            )
     else:
       st.warning(
           "Automated ingestion blocked due to low confidence or missing fields."
@@ -264,7 +295,7 @@ with tab2:
 
     if records:
       df_graph = pd.DataFrame(records)
-      st.dataframe(df_graph, width='stretch')
+      st.dataframe(df_graph, use_container_width=True)
 
       col_m1, col_m2, col_m3 = st.columns(3)
       col_m1.metric("Total Equipment Registered", len(df_graph))
